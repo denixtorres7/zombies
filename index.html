@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>¡Ayuda al Rey a ganar!</title>
+  <title>Corredor de obstáculos</title>
   <style>
     * {
       box-sizing: border-box;
@@ -333,7 +333,8 @@
 </head>
 <body>
   <main class="contenedor">
-    <h1>Corredora de obstáculos</h1>
+    <h1>¡Ayuda al Rey a ganar!</h1>
+    <p style="text-align:center;margin-bottom:8px;color:#444;"><strong>Niveles:</strong> Ciudad → Bosque → Nieve → Noche Zombie 🧟🌙</p>
 
     <div class="info">
       <span>Puntaje: <span id="puntaje">0</span></span>
@@ -422,16 +423,31 @@
 
     function sonidoAmbiente() {
       if (!audioCtx || !jugando || perdio) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(55, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.5);
+
+      const bajo = audioCtx.createOscillator();
+      const beat = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      const gain2 = audioCtx.createGain();
+
+      bajo.type='triangle';
+      beat.type='square';
+
+      bajo.frequency.value=55;
+      beat.frequency.value=220;
+
+      gain1.gain.value=.02;
+      gain2.gain.value=.01;
+
+      bajo.connect(gain1);
+      beat.connect(gain2);
+      gain1.connect(audioCtx.destination);
+      gain2.connect(audioCtx.destination);
+
+      bajo.start();
+      beat.start(audioCtx.currentTime+.15);
+
+      bajo.stop(audioCtx.currentTime+.45);
+      beat.stop(audioCtx.currentTime+.25);
     }
     let record = Number(localStorage.getItem("recordCorredor")) || 0;
     let obstaculos = [];
@@ -457,7 +473,7 @@
       vidasTexto.textContent = vidas;
       mensaje.classList.add("oculto");
       iniciarAudio();
-      setInterval(sonidoAmbiente, 1200);
+      setInterval(sonidoAmbiente, 850);
       suelo.style.animationPlayState = "running";
 
       clearInterval(intervaloObstaculos);
