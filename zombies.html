@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corredor de obstáculos</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #f1f1f1;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+
+    .contenedor {
+      width: min(900px, 95vw);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .juego {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      overflow: hidden;
+      border: 4px solid #222;
+      border-radius: 16px;
+      background: #87ceeb;
+      transition: background 1s;
+    }
+
+    .juego.bosque {
+      background: #98d67b;
+    }
+
+    .juego.nieve {
+      background: #dff4ff;
+    }
+
+    .juego.nocturna {
+      background: linear-gradient(#081421,#14213d,#1d3557);
+    }
+
+    .juego.nocturna .luna{
+      box-shadow:0 0 20px #fff;
+    }
+
+    .juego.nocturna .suelo{
+      opacity:.7;
+    }
+
+    .suelo {
+      position: absolute;
+      bottom: 50px;
+      width: 200%;
+      height: 4px;
+      background: repeating-linear-gradient(
+        90deg,
+        #444 0,
+        #444 20px,
+        transparent 20px,
+        transparent 40px
+      );
+      animation: moverSuelo 1s linear infinite;
+    }
+
+    @keyframes moverSuelo {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .jugador {
+      position: absolute;
+      left: 70px;
+      bottom: 54px;
+      width: 46px;
+      height: 64px;
+      z-index: 3;
+    }
+
+    .jugador.golpeado {
+      animation: parpadeo 0.25s linear 4;
+    }
+
+    @keyframes parpadeo {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    .cabeza {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: #ffd166;
+      border: 3px solid #222;
+      border-radius: 6px;
+      left: 7px;
+      top: 0;
+    }
+
+    .coleta{
+      position:absolute;
+      width:12px;
+      height:16px;
+      background:#111;
+      right:-8px;
+      top:6px;
+      border-radius:0 8px 8px 8px;
+      animation: moverCola .25s infinite alternate;
+    }
+
+    @keyframes moverCola{
+      from{transform:rotate(10deg)}
+      to{transform:rotate(-10deg)}
+    }
+
+    .cabello {
+      position: absolute;
+      width: 32px;
+      height: 12px;
+      background: #111;
+      top: -6px;
+      left: -5px;
+      border-radius: 8px 8px 4px 4px;
+    }
+
+    .cuerpo {
+      position: absolute;
+      width: 38px;
+      height: 28px;
+      background: #d90429;
+      border: 3px solid #222;
+      left: 4px;
+      top: 26px;
+      border-radius: 4px;
+      box-shadow: inset 0 -9px 0 #111;
+    }
+
+    .pierna {
+      position: absolute;
+      width: 10px;
+      height: 20px;
+      background: #111;
+      border: 2px solid #222;
+      top: 50px;
+      animation: correr 0.25s infinite alternate;
+      transform-origin: top center;
+    }
+
+    .pierna1 {
+      left: 8px;
+    }
+
+    .pierna2 {
+      left: 24px;
+      animation-delay: 0.12s;
+    }
+
+    @keyframes correr {
+      from { transform: rotate(18deg); }
+      to { transform: rotate(-18deg); }
+    }
+
+    @keyframes pasoRey {
+      0% { transform: translateX(0) rotate(12deg); }
+      25% { transform: translateX(-2px) rotate(-10deg); }
+      50% { transform: translateX(0px) rotate(10deg); }
+      75% { transform: translateX(2px) rotate(-12deg); }
+      100% { transform: translateX(0) rotate(12deg); }
+    }
+
+    .juego.nocturna .pierna1{
+      animation: pasoRey .22s infinite;
+    }
+
+    .juego.nocturna .pierna2{
+      animation: pasoRey .22s infinite reverse;
+    }
+
+    .juego.nocturna .cuerpo{
+      transform: skew(-6deg);
+    }
+
+    .jugador.agachado {
+      height: 42px;
+    }
+
+    .jugador.agachado .pierna {
+      animation: none;
+      transform: rotate(90deg);
+      top: 40px;
+    }
+
+    .obstaculo {
+      position: absolute;
+      bottom: 54px;
+      width: 38px;
+      height: 56px;
+      background: #59656f;
+      border: 3px solid #222;
+      border-radius: 7px 7px 3px 3px;
+      box-shadow: inset 0 -12px 0 #2b2d42;
+    }
+
+    .obstaculo .brazo {
+      position: absolute;
+      width: 26px;
+      height: 8px;
+      background: #9ef01a;
+      border: 2px solid #222;
+      top: 12px;
+      left: -20px;
+      transform: rotate(-12deg);
+      border-radius: 6px;
+    }
+
+    .obstaculo .brazo2 {
+      left: 28px;
+      transform: rotate(12deg);
+    }
+
+    .obstaculo .cara-zombie {
+      position: absolute;
+      top: -28px;
+      left: 2px;
+      width: 28px;
+      height: 28px;
+      background: #9ef01a;
+      border: 3px solid #222;
+      border-radius: 6px;
+    }
+
+    .obstaculo .cara-zombie::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 5px;
+      width: 5px;
+      height: 5px;
+      background: #111;
+      border-radius: 50%;
+      box-shadow: 12px 0 0 #111;
+    }
+
+    .obstaculo .cara-zombie::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      bottom: 5px;
+      width: 12px;
+      height: 3px;
+      background: #111;
+    }
+
+    .obstaculo::before {
+      display: none;
+    }
+
+    .obstaculo::after {
+      display: none;
+    }
+
+    .obstaculo.bajo {
+      height: 28px;
+      width: 58px;
+    }
+
+    .obstaculo.alto {
+      height: 22px;
+      width: 70px;
+      bottom: 120px;
+      background:#7b2cbf;
+      border-radius:18px;
+    }
+
+    .obstaculo.alto .cara-zombie{
+      top:-18px;
+    }
+
+    .luna {
+      position: absolute;
+      top: 24px;
+      right: 45px;
+      width: 44px;
+      height: 44px;
+      background: #ffe066;
+      border: 3px solid #222;
+      border-radius: 50%;
+    }
+
+    .mensaje {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background: rgba(255,255,255,0.7);
+      gap: 10px;
+    }
+
+    .oculto {
+      display: none;
+    }
+
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      background: #222;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <h1>Corredora de obstáculos</h1>
+
+    <div class="info">
+      <span>Puntaje: <span id="puntaje">0</span></span>
+      <span>Vidas: <span id="vidas">3</span></span>
+      <span>Récord: <span id="record">0</span></span>
+    </div>
+
+    <section class="juego" id="juego">
+      <div class="luna"></div>
+      <div class="suelo" id="suelo"></div>
+      <div class="jugador" id="jugador">
+        <div class="cabeza">
+          <div class="cabello"></div><div class="coleta"></div>
+        </div>
+        <div class="cuerpo"></div>
+        <div class="pierna pierna1"></div>
+        <div class="pierna pierna2"></div>
+      </div>
+      <div class="mensaje" id="mensaje">
+        <strong>Presiona espacio/↑ para saltar y ↓ para agacharte</strong>
+        <button id="btnInicio">Iniciar juego</button>
+      </div>
+    </section>
+
+    <p class="ayuda">Controles: espacio/↑ = saltar · ↓ = agacharse. Algunos zombies altos pasan por arriba: tendrás que agacharte para sobrevivir.</p>
+  </main>
+
+  <script>
+    const juego = document.getElementById("juego");
+    const jugador = document.getElementById("jugador");
+    const mensaje = document.getElementById("mensaje");
+    const btnInicio = document.getElementById("btnInicio");
+    const puntajeTexto = document.getElementById("puntaje");
+    const vidasTexto = document.getElementById("vidas");
+    const recordTexto = document.getElementById("record");
+    const suelo = document.getElementById("suelo");
+
+    let jugando = false;
+    let perdio = false;
+    let saltando = false;
+    let velocidad = 6;
+    let gravedad = 0.8;
+    let impulsoSalto = 16;
+    let velocidadVertical = 0;
+    let posicionY = 0;
+    let puntaje = 0;
+    let vidas = 3;
+    let invulnerable = false;
+    let audioCtx;
+
+    function iniciarAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function sonidoGolpe() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(90, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(35, audioCtx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.22);
+    }
+
+    function sonidoSalto() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(520, audioCtx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.14);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function sonidoAmbiente() {
+      if (!audioCtx || !jugando || perdio) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(55, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+    let record = Number(localStorage.getItem("recordCorredor")) || 0;
+    let obstaculos = [];
+    let intervaloObstaculos;
+    let animacion;
+
+    recordTexto.textContent = record;
+
+    function iniciarJuego() {
+      jugando = true;
+      perdio = false;
+      saltando = false;
+      vidas = 3;
+      invulnerable = false;
+      velocidad = 6;
+      velocidadVertical = 0;
+      posicionY = 0;
+      puntaje = 0;
+      obstaculos.forEach(obstaculo => obstaculo.elemento.remove());
+      obstaculos = [];
+      puntajeTexto.textContent = puntaje;
+      cambiarFondo();
+      vidasTexto.textContent = vidas;
+      mensaje.classList.add("oculto");
+      iniciarAudio();
+      setInterval(sonidoAmbiente, 1200);
+      suelo.style.animationPlayState = "running";
+
+      clearInterval(intervaloObstaculos);
+      intervaloObstaculos = setInterval(crearObstaculo, 1300);
+
+      cancelarAnimacion();
+      bucleJuego();
+    }
+
+    function cancelarAnimacion() {
+      if (animacion) cancelAnimationFrame(animacion);
+    }
+
+    function saltar() {
+      if (!jugando || perdio) {
+        iniciarJuego();
+        return;
+      }
+
+      if (!saltando) {
+        saltando = true;
+        velocidadVertical = impulsoSalto;
+        sonidoSalto();
+      }
+    }
+
+    function crearObstaculo() {
+      if (!jugando || perdio) return;
+
+      const elemento = document.createElement("div");
+      const tipo=Math.random();
+      if(tipo<0.33){
+        elemento.className="obstaculo bajo";
+      }else if(tipo<0.66){
+        elemento.className="obstaculo alto";
+      }else{
+        elemento.className="obstaculo";
+      }
+      elemento.innerHTML = `
+        <div class="cara-zombie"></div>
+        <div class="brazo"></div>
+        <div class="brazo brazo2"></div>
+      `;
+      juego.appendChild(elemento);
+
+      obstaculos.push({
+        elemento,
+        x: juego.clientWidth + 40,
+        pasado: false
+      });
+    }
+
+    function actualizarJugador() {
+      if (saltando) {
+        posicionY += velocidadVertical;
+        velocidadVertical -= gravedad;
+
+        if (posicionY <= 0) {
+          posicionY = 0;
+          saltando = false;
+          velocidadVertical = 0;
+        }
+      }
+
+      jugador.style.bottom = `${60 + posicionY}px`;
+    }
+
+    function cambiarFondo() {
+      juego.classList.remove("bosque", "nieve", "nocturna");
+
+      if (puntaje >= 100 && puntaje < 200) {
+        juego.classList.add("bosque");
+      }
+
+      if (puntaje >= 200 && puntaje <300) {
+        juego.classList.add("nieve");
+      }
+
+      if (puntaje >=300){
+        juego.classList.add("nocturna");
+      }
+    }
+
+    function actualizarObstaculos() {
+      obstaculos.forEach((obstaculo, index) => {
+        obstaculo.x -= velocidad;
+        obstaculo.elemento.style.left = `${obstaculo.x}px`;
+
+        if (!obstaculo.pasado && obstaculo.x + obstaculo.elemento.offsetWidth < 70) {
+          obstaculo.pasado = true;
+          puntaje += 10;
+          puntajeTexto.textContent = puntaje;
+          cambiarFondo();
+
+          if (puntaje % 50 === 0) {
+            velocidad += 0.6;
+          }
+        }
+
+        if (obstaculo.x < -80) {
+          obstaculo.elemento.remove();
+          obstaculos.splice(index, 1);
+        }
+      });
+    }
+
+    function detectarColision() {
+      if (invulnerable) return;
+
+      const rectJugador = jugador.getBoundingClientRect();
+
+      for (const obstaculo of obstaculos) {
+        const rectObstaculo = obstaculo.elemento.getBoundingClientRect();
+
+        const colision =
+          rectJugador.left < rectObstaculo.right &&
+          rectJugador.right > rectObstaculo.left &&
+          rectJugador.top < rectObstaculo.bottom &&
+          rectJugador.bottom > rectObstaculo.top;
+
+        if (colision) {
+          perderVida();
+          break;
+        }
+      }
+    }
+
+    function perderVida() {
+      vidas--;
+      vidasTexto.textContent = vidas;
+
+      sonidoGolpe();
+
+      if (navigator.vibrate) {
+        navigator.vibrate([180, 80, 180]);
+      }
+
+      jugador.classList.add("golpeado");
+      setTimeout(() => jugador.classList.remove("golpeado"), 1000);
+
+      invulnerable = true;
+      setTimeout(() => invulnerable = false, 1200);
+
+      if (vidas <= 0) {
+        terminarJuego();
+      }
+    }
+
+    function terminarJuego() {
+      jugando = false;
+      perdio = true;
+      clearInterval(intervaloObstaculos);
+      suelo.style.animationPlayState = "paused";
+
+      if (puntaje > record) {
+        record = puntaje;
+        localStorage.setItem("recordCorredor", record);
+        recordTexto.textContent = record;
+      }
+
+      mensaje.innerHTML = `
+        <strong>Juego terminado</strong>
+        <p>Puntaje final: ${puntaje}</p>
+        <button id="btnReinicio">Jugar de nuevo</button>
+      `;
+      mensaje.classList.remove("oculto");
+      document.getElementById("btnReinicio").addEventListener("click", iniciarJuego);
+    }
+
+    function bucleJuego() {
+      if (!jugando) return;
+
+      actualizarJugador();
+      actualizarObstaculos();
+      detectarColision();
+
+      animacion = requestAnimationFrame(bucleJuego);
+    }
+
+    document.addEventListener("keydown", (evento) => {
+      if (evento.code === "Space" || evento.code === "ArrowUp") {
+        evento.preventDefault();
+        saltar();
+      }
+
+      if (evento.code === "ArrowDown") {
+        jugador.classList.add("agachado");
+      }
+    });
+
+    document.addEventListener("keyup", (evento) => {
+      if (evento.code === "ArrowDown") {
+        jugador.classList.remove("agachado");
+      }
+    });
+
+    juego.addEventListener("click", saltar);
+    juego.addEventListener("touchstart", saltar);
+    btnInicio.addEventListener("click", iniciarJuego);
+  </script>
+</body>
+</html>
